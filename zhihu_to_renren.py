@@ -7,6 +7,9 @@ import urllib2
 import urllib
 from pyquery import PyQuery as pq
 import re
+import smtplib
+from email.mime.text import MIMEText
+import sys
 
 
 def setup_cookie():
@@ -61,7 +64,8 @@ def parse_zhihu():
     #得到回答者自我描述
     about=re.findall(r"""<strong title=".*?" class=".*?">(.*?)</strong>""",data)
 
-    return [title, link, content, author, about]
+    zhihu_data=[title, link, content, author, about]
+    return zhihu_data
 
 #登录人人
 def login_renren():
@@ -77,7 +81,7 @@ def login_renren():
     auto_post(login_renren_url,post_data)
 
 #发表人人日志
-def post_renren_blog():
+def post_renren_blog(zhihu_data):
     post_blog_url='http://blog.renren.com/NewEntry.do'
 
     #解析得出post_id这个动态生成的值
@@ -85,19 +89,24 @@ def post_renren_blog():
     post_id=html_source('#postFormId').attr('value')
 
     #日志内容即来自解析知乎得到的文章数据
-    zhihu_data=parse_zhihu()
+    zhihu_data=zhihu_data
+    
+    body="""<div>
+            <p>Posted by zhihu2renren Robot——每天十点，分享知乎精彩问答！</p>
+            <p>原文地址：%s</p>
+            <p>回答者：%s</p>
+            <p>回答者简介：%s</p>
+            </div>
+            %s
+            """%(zhihu_data[3][0],
+                 zhihu_data[1],
+                 zhihu_data[4][0],
+                 zhihu_data[2][0],)
 
     #发表人人日志提交的数据
     post_data=urllib.urlencode({
         'title':'知乎每日热门问答——%s'%zhihu_data[0][0],
-        'body':"""<p>Posted by zhihu2renren Robot——每天十点，分享知乎精彩问答！</p>
-                  <p>原文地址：%s</p>
-                  <p>回答者：%s</p>
-                  <p>回答者简介：%s</p>%s
-               """%(zhihu_data[3][0],
-                    zhihu_data[1],
-                    zhihu_data[4][0],
-                    zhihu_data[2][0],),
+        'body':body,
         'categoryId':'0',
         'blogControl':'99',
         'postFormId':post_id,
@@ -106,11 +115,61 @@ def post_renren_blog():
     auto_post(post_blog_url,post_data)
     
 
+#发送邮件
+def post_email(mail_info):
+    mail_from='******@126.com'
+    mail_to=['******@gmail.com']
+    mail_body=mail_info
+    msg=MIMEText(mail_body)
+    msg['From']=mail_from
+    msg['To']=';'.join(mail_to)
+    msg['Subject']='zhihu_to_renren robot notification'
+
+    smtp=smtplib.SMTP()
+    smtp.connect('smtp.126.com')
+    smtp.login('******@126.com','******')
+    smtp.sendmail(mail_from, mail_to, msg.as_string())
+    smtp.quit()
+
+
 def main():
     setup_cookie()
-    login_zhihu()
-    login_renren()
-    post_renren_blog()
+
+    #登录不成功，发送通知邮件并退出进程
+    try:
+        login_zhihu()
+    except Exception, e:
+        mail_info='failed to login zhihu!'
+        post_email(mail_info)
+        sys.exit()
+
+    # 登录成功，开始抓取知乎数据
+    zhihu_data=parse_zhihu()
+    #若主要数据抓取成功
+    if all([zhihu_data[1], zhihu_data[2][0], zhihu_data[3][0]]):
+        #尝试登陆人人
+        try:
+            login_renren()
+        #登录人人不成功，发送通知邮件并退出进程
+        except Exception, e:
+            mail_info='failed to login renren!'
+            post_email(mail_info)
+            sys.exit()
+
+        mail_info=zhihu_data[2][0]
+        #发表人人日志成功，发送通知邮件
+        try:
+            post_renren_blog(mail_info)
+            post_email(mail_info)
+        #发表不成功，发送通知邮件
+        except Exception, e:
+            mail_info='failed to post blog on renren!'
+            post_email(mail_info)
+    #若主要数据有空缺，则发送通知邮件并结束。
+    else:
+        mail_info='failed to get enough data from zhihu, so can not post a blog on renren!'
+        post_email(mail_info)
+            
     print 'ok'
 
 if __name__=='__main__':
