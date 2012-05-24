@@ -160,7 +160,6 @@ def main():
         #尝试发表人人日志
         try:
             post_renren_blog(mail_info)
-            post_email(mail_info)
         #发表不成功，发送通知邮件并退出进程
         except Exception, e:
             mail_info='failed to post blog on renren!'
