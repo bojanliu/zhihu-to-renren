@@ -117,7 +117,7 @@ def post_renren_blog(zhihu_data):
 
 #发送邮件
 def post_email(mail_info):
-    mail_from='******@126.com'
+    mail_from='*****<******@126.com>'
     mail_to=['******@gmail.com']
     mail_body=mail_info
     msg=MIMEText(mail_body)
@@ -135,15 +135,16 @@ def post_email(mail_info):
 def main():
     setup_cookie()
 
-    #登录不成功，发送通知邮件并退出进程
+    #尝试登陆知乎
     try:
         login_zhihu()
+    #登录不成功，发送通知邮件并退出进程
     except Exception, e:
         mail_info='failed to login zhihu!'
         post_email(mail_info)
         sys.exit()
 
-    # 登录成功，开始抓取知乎数据
+    #登录成功，开始抓取知乎数据
     zhihu_data=parse_zhihu()
     #若主要数据抓取成功
     if all([zhihu_data[1], zhihu_data[2][0], zhihu_data[3][0]]):
@@ -156,15 +157,18 @@ def main():
             post_email(mail_info)
             sys.exit()
 
-        mail_info=zhihu_data[2][0]
-        #发表人人日志成功，发送通知邮件
+        #尝试发表人人日志
         try:
             post_renren_blog(mail_info)
             post_email(mail_info)
-        #发表不成功，发送通知邮件
+        #发表不成功，发送通知邮件并退出进程
         except Exception, e:
             mail_info='failed to post blog on renren!'
             post_email(mail_info)
+            sys.exit()
+        #发表人人日志成功，发送通知邮件，内容为抓取到的正文
+        mail_info=zhihu_data[2][0]
+        post_email(mail_info)
     #若主要数据有空缺，则发送通知邮件并结束。
     else:
         mail_info='failed to get enough data from zhihu, so can not post a blog on renren!'
