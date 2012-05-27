@@ -98,8 +98,8 @@ def post_renren_blog(zhihu_data):
             <p>回答者简介：%s</p>
             </div>
             %s
-            """%(zhihu_data[3][0],
-                 zhihu_data[1],
+            """%(zhihu_data[1],
+                 zhihu_data[3][0],
                  zhihu_data[4][0],
                  zhihu_data[2][0],)
 
