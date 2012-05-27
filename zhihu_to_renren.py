@@ -92,20 +92,21 @@ def post_renren_blog(zhihu_data):
     zhihu_data=zhihu_data
     
     body="""<div>
-            <p>Posted by zhihu2renren Robot——每天十点，分享知乎精彩问答！</p>
-            <p>原文地址：%s</p>
-            <p>回答者：%s</p>
-            <p>回答者简介：%s</p>
+                <strong>Posted by zhihu2renren Robot——每天十点，分享知乎精彩问答！</strong></br>
+                <strong>原文地址：<a href='%s'>%s</a></strong></br>
+                <strong>回答者：%s</strong></br>
+                <strong>回答者简介：%s</strong></br>
             </div>
             %s
             """%(zhihu_data[1],
-                 zhihu_data[3][0],
-                 zhihu_data[4][0],
-                 zhihu_data[2][0],)
+                 zhihu_data[1],#原文链接
+                 zhihu_data[3][0],#回答者
+                 zhihu_data[4][0],#回答者简介
+                 zhihu_data[2][0],)#回答正文
 
     #发表人人日志提交的数据
     post_data=urllib.urlencode({
-        'title':'知乎每日热门问答——%s'%zhihu_data[0][0],
+        'title':'知乎每日热门问答——%s'%zhihu_data[0][0],#问答标题
         'body':body,
         'categoryId':'0',
         'blogControl':'99',
